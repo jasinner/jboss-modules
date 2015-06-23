@@ -19,13 +19,10 @@
 package org.jboss.modules;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Set;
 
 import org.jboss.modules.filter.PathFilter;
@@ -37,6 +34,7 @@ import org.jboss.modules.filter.PathFilters;
  */
 public final class DependencyTreeJsonViewer {
 	private static Set<ModuleNode> nodes = new HashSet<ModuleNode>();
+	private static Set<ModuleDep> dependencies = new HashSet<ModuleDep>();
 
 	private static <I, O extends I> O[] filtered(Class<O[]> oType, I... inputs) {
 		final I[] newArray = Arrays.copyOf(inputs, inputs.length);
@@ -71,11 +69,16 @@ public final class DependencyTreeJsonViewer {
 			for (int i = 0, dependenciesLength = dependencies.length; i < dependenciesLength; i++) {
 				// use to print(out, prefix, dependencies[i], visited, i ==
 				// dependenciesLength - 1, roots);
-				addDependency(dependencies[i], visited,
+				addDependency(concreteModuleSpec
+						.getModuleIdentifier().toString(), dependencies[i], visited,
 						i == dependenciesLength - 1, roots);
 			}
-		} else {
-			// out.println();
+		} else if(spec instanceof AliasModuleSpec){
+			final AliasModuleSpec aliasModuleSpec = (AliasModuleSpec) spec;
+			final ModuleIdentifier aliasTarget = aliasModuleSpec.getAliasTarget();
+			ModuleNode node = new ModuleNode(spec.getModuleIdentifier().toString());
+			node.setAlias(aliasTarget.toString());
+			nodes.add(node);
 		}
 	}
 
@@ -91,13 +94,16 @@ public final class DependencyTreeJsonViewer {
 	 * out.println(e); } catch (ModuleLoadException e) { out.println(e); } } }
 	 */
 
-	private static void addDependency(DependencySpec spec,
+	private static void addDependency(String source, DependencySpec spec,
 			FastCopyHashSet<ModuleIdentifier> visited, final boolean last,
 			final File... roots) {
 		if (spec instanceof ModuleDependencySpec) {
 			final ModuleDependencySpec moduleDependencySpec = (ModuleDependencySpec) spec;
 			final ModuleIdentifier identifier = moduleDependencySpec
 					.getIdentifier();
+			ModuleDep moduleDep = new ModuleDep(source, identifier.toString());
+			if(!moduleDependencySpec.isOptional())
+				dependencies.add(moduleDep);
 			/*
 			 * out.print(last ? "\t\t}," : "\t\t{"); //start a new json object
 			 * here out.println("\"name\": " + identifier + ",");
@@ -141,18 +147,31 @@ public final class DependencyTreeJsonViewer {
 	public static void print(PrintWriter out, ModuleIdentifier identifier,
 			final File... roots) {
 		resolve(identifier, new FastCopyHashSet<ModuleIdentifier>(), roots);
+		out.print(String.format("{%n"));
 		printNodes(out);
+		printDeps(out);
+		out.print(String.format("}%n"));
 		out.flush();
 	}
 
 	private static void printNodes(PrintWriter out) {
 		Iterator<ModuleNode> nodesIter = nodes.iterator();
-		out.print(String.format("{%n\t\"nodes\": [%n"));
+		out.print(String.format("\t\"nodes\": [%n"));
 		while (nodesIter.hasNext()) {
 			out.print(nodesIter.next());
 			out.print(nodesIter.hasNext() ? String.format(",%n") : String.format("%n"));
 		}
 		out.print(String.format("\t],%n"));
+	}
+
+	private static void printDeps(PrintWriter out) {
+		Iterator<ModuleDep> depsIter = dependencies.iterator();
+		out.print(String.format("\t\"links\": [%n"));
+		while(depsIter.hasNext()){
+			out.print(depsIter.next());
+			out.print(depsIter.hasNext() ? String.format(",%n") : String.format("%n"));
+		}
+		out.print(String.format("\t]%n"));
 	}
 
 	private static void printSource(PrintWriter out, ModuleIdentifier identifier) {
