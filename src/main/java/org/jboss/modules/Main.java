@@ -86,8 +86,9 @@ public final class Main {
         System.out.println("    -dep,-dependencies <module-spec>[,<module-spec>,...]");
         System.out.println("                  A list of module dependencies to add to the class path;");
         System.out.println("                  requires -class or -cp");
-        System.out.println("    -deptree      Print the dependency tree of the given module instead of running it");
         System.out.println("    -jar          Specify that the final argument is the name of a");
+        System.out.println("    -deptree      Print the dependency tree of the given module instead of running it");
+        System.out.println("    -deptreejson  Print the dependency tree of the given module in json format for D3.js");
         System.out.println("                  JAR file to run as a module; not compatible with -class");
         System.out.println("    -jaxpmodule <module-spec>");
         System.out.println("                  The default JAXP implementation to use of the JDK");
@@ -117,6 +118,7 @@ public final class Main {
         boolean classpathDefined = false;
         boolean classDefined = false;
         boolean depTree = false;
+        boolean depTreejson = false;
         String nameArgument = null;
         ModuleIdentifier jaxpModuleIdentifier = null;
         boolean defaultSecMgr = false;
@@ -148,7 +150,7 @@ public final class Main {
                     } else if ("-config".equals(arg)) {
                         System.err.println("Config files are no longer supported.  Use the -mp option instead");
                         System.exit(1);
-                    } else if ("-deptree".equals(arg)) {
+                    } else if ("-deptree".equals(arg) || "-deptreejson".equals(arg)) {
                         if (depTree) {
                             System.err.println("-deptree may only be specified once");
                             System.exit(1);
@@ -165,7 +167,9 @@ public final class Main {
                             System.err.println("-deptree may not be specified with -classpath");
                             System.exit(1);
                         }
-                        depTree = true;
+						if ("-deptree".equals(arg))
+                        		depTree = true;
+                        else depTreejson = true;
                     } else if ("-jaxpmodule".equals(arg)) {
                         jaxpModuleIdentifier = ModuleIdentifier.fromString(args[++i]);
                     } else if ("-jar".equals(arg)) {
@@ -357,7 +361,10 @@ public final class Main {
             DependencyTreeViewer.print(new PrintWriter(System.out), ModuleIdentifier.fromString(nameArgument), LocalModuleFinder.getRepoRoots(true));
             System.exit(0);
         }
-
+        if(depTreejson){
+        	DependencyTreeJsonViewer.print(new PrintWriter(System.out), ModuleIdentifier.fromString(nameArgument), LocalModuleFinder.getRepoRoots(true));
+            System.exit(0);
+        }
         final ModuleLoader loader;
         final ModuleLoader environmentLoader;
         environmentLoader = DefaultBootModuleLoaderHolder.INSTANCE;
