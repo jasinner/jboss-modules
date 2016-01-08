@@ -39,7 +39,7 @@ final class ModulesPolicy extends Policy {
 
     private static Permissions getAllPermission() {
         final Permissions permissions = new Permissions();
-        permissions.add(ALL_PERMISSION);
+        //permissions.add(ALL_PERMISSION);
         return permissions;
     }
 
